@@ -1,103 +1,179 @@
+// In app/page.tsx
+
+"use client"
+
 import Image from "next/image";
+import * as XLSX from "xlsx";
+import { estimatedIntake, nonCarcinogenicRisk } from "@/utils/math_utils";
+import { useState, useEffect, useCallback } from "react";
+import { stringToNumber } from "@/utils/main";
+import styles from './page.module.css';
+
+type rlsColumns = {
+  RfDo: number|undefined, //RfD_o [mg/kg-day]
+};
+type userArguments = {
+  c?:number,
+  ir?:number,
+  ef?:number,
+  ed?:number,
+  bw?:number,
+  at?:number,
+  analyte?:string
+}
+
+
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [userInput, setUserInput] = useState<userArguments>({});
+  const [calculateResult, setCalculateResult] = useState<string>("");
+  const [mapData, setMapData] = useState<Map<string, rlsColumns>>(new Map());
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const loadDataFromXlsx = useCallback(async () => {
+    const res = await fetch("/RSLs_summaryTable.xlsx");
+    const arrayBuffer = await res.arrayBuffer();
+
+    const workbook = XLSX.read(arrayBuffer, { type: "array" });
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    const resultMap = new Map<string, rlsColumns>();
+    for (let i = 1; i < jsonData.length; i++) {
+      const row = jsonData[i];//
+      const key = row[13];    // Coluna N
+      const rfd = row[4];     // Coluna E
+      if (key !== undefined) {
+        resultMap.set(String(key), {
+          RfDo: stringToNumber(rfd)
+        });
+      }
+    }
+
+    setMapData(resultMap);
+    return;
+  }, [setMapData]);
+
+  useEffect(() => {
+    loadDataFromXlsx();
+  }, [loadDataFromXlsx]); // Added dependency to useEffect hook
+
+  // Performs the calculation when the button is clicked
+  const handleCalculate = () => {
+    // Verifing if the user inform all fields.
+    if (
+      !userInput.c  ||
+      !userInput.ir ||
+      !userInput.ef ||
+      !userInput.ed ||
+      !userInput.bw ||
+      !userInput.at ||
+      !userInput.analyte
+    ) {
+      setCalculateResult("ERROR: You need to inform all fields.");
+      return;
+    }
+    // Resultados
+    let estimateIntake = estimatedIntake(userInput.c, userInput.ir, userInput.ef, userInput.ed, userInput.bw, userInput.at);
+    
+    const analyteData = mapData.get(userInput.analyte);
+    if(!analyteData?.RfDo) {
+      setCalculateResult("ERROR: Analyte not founded, or, RFDo not founded");
+      return;
+    } 
+    let risk = nonCarcinogenicRisk(estimateIntake, analyteData.RfDo);
+    
+    setCalculateResult(String(risk));
+  };
+
+  return (
+    <main className={styles.main}>
+      <div className={styles.container}>
+        {/* Left side: Inputs and Button */}
+        <div className={styles.inputSection}>
+
+          <label htmlFor="C">Contaminant Concentration in Medium [mg/L or mg/kg]:</label>
+          <input
+            id="C"
+            type="number"
+            value={userInput.c ?? ''}
+            onChange={(e) => setUserInput({...userInput, c: stringToNumber(e.target.value)})}
+            className={styles.inputField}
+          />
+
+          <label htmlFor="IR">Intake Rate / Contact Rate with medium [L/day or kg/day]:</label>
+          <input
+            id="IR"
+            type="number"
+            value={userInput.ir ?? ''}
+            onChange={(e) => setUserInput({...userInput, ir: stringToNumber(e.target.value)})}
+            className={styles.inputField}
+          />
+
+          <label htmlFor="EF">Exposure Frequency [day/year]:</label>
+          <input
+            id="EF"
+            type="number"
+            value={userInput.ef ?? ''}
+            onChange={(e) => setUserInput({...userInput, ef: stringToNumber(e.target.value)})}
+            className={styles.inputField}
+          />
+
+          <label htmlFor="ED">Exposure Duration [year]:</label>
+          <input
+            id="ED"
+            type="number"
+            value={userInput.ed ?? ''}
+            onChange={(e) => setUserInput({...userInput, ed: stringToNumber(e.target.value)})}
+            className={styles.inputField}
+          />
+
+          <label htmlFor="bw">Body Weight [kg]:</label>
+          <input
+            id="BW"
+            type="number"
+            value={userInput.bw ?? ''}
+            onChange={(e) => setUserInput({...userInput, bw: stringToNumber(e.target.value)})}
+            className={styles.inputField}
+          />
+
+          <label htmlFor="AT">Averaging time [day]:</label>
+          <input
+            id="AT"
+            type="number"
+            value={userInput.at ?? ''}
+            onChange={(e) => setUserInput({...userInput, at: stringToNumber(e.target.value)})}
+            className={styles.inputField}
+          />
+
+          <label htmlFor="anality">Anality:</label>
+          <select
+            id="anality"
+            value={userInput.analyte ?? ''}
+            onChange={(e) => setUserInput({...userInput, analyte: e.target.value})}
+            className={styles.inputField} /* Matched class for consistency */
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {/* Added a default, disabled option */}
+            <option value="" disabled>Select an analyte</option>
+            {Array.from(mapData.keys()).map((key) => (
+              <option key={key} value={key}>
+                {key}
+              </option>
+            ))}
+          </select>
+          
+          <button onClick={handleCalculate} className={styles.calculateButton}>
+            Calculate
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+        {/* Right side: Result Display */}
+        <div className={styles.resultSection}>
+          <div className={styles.resultBox}>
+            <p className={styles.resultText}>Risk Quotient</p>
+            <span className={styles.resultValue}>{calculateResult}</span>
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }
