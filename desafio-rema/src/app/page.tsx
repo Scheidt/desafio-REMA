@@ -1,32 +1,32 @@
 // In app/page.tsx
 
-"use client"
+"use client";
 
 import Image from "next/image";
 import * as XLSX from "xlsx";
 import { estimatedIntake, nonCarcinogenicRisk } from "@/utils/math_utils";
 import { useState, useEffect, useCallback } from "react";
 import { stringToNumber } from "@/utils/main";
-import styles from './page.module.css';
+import styles from "./page.module.css";
 
 type rlsColumns = {
-  RfDo: number|undefined, //RfD_o [mg/kg-day]
+  RfDo: number | undefined; //RfD_o [mg/kg-day]
 };
 type userArguments = {
-  c?:number,
-  ir?:number,
-  ef?:number,
-  ed?:number,
-  bw?:number,
-  at?:number,
-  analyte?:string
-}
-
-
+  c?: number;
+  ir?: number;
+  ef?: number;
+  ed?: number;
+  bw?: number;
+  at?: number;
+  analyte?: string;
+};
 
 export default function Home() {
   const [userInput, setUserInput] = useState<userArguments>({});
-  const [calculateResult, setCalculateResult] = useState<string>("");
+  const [calculateResult, setCalculateResult] = useState<number>(NaN);
+  const [error, setError] = useState<string | null>(null);
+  const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [mapData, setMapData] = useState<Map<string, rlsColumns>>(new Map());
 
   const loadDataFromXlsx = useCallback(async () => {
@@ -35,16 +35,18 @@ export default function Home() {
 
     const workbook = XLSX.read(arrayBuffer, { type: "array" });
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1,
+    });
 
     const resultMap = new Map<string, rlsColumns>();
     for (let i = 1; i < jsonData.length; i++) {
-      const row = jsonData[i];//
-      const key = row[13];    // Coluna N
-      const rfd = row[4];     // Coluna E
+      const row = jsonData[i]; //
+      const key = row[13]; // Coluna N
+      const rfd = row[4]; // Coluna E
       if (key !== undefined) {
         resultMap.set(String(key), {
-          RfDo: stringToNumber(rfd)
+          RfDo: stringToNumber(rfd),
         });
       }
     }
@@ -54,6 +56,17 @@ export default function Home() {
   }, [setMapData]);
 
   useEffect(() => {
+    if (Number.isNaN(calculateResult)) {
+      return;
+    }
+    if (calculateResult >= 1) {
+      setResultMessage("Potential Health Risk");
+    } else {
+      setResultMessage("Low or No Potential Health Risks");
+    }
+  }, [calculateResult]);
+
+  useEffect(() => {
     loadDataFromXlsx();
   }, [loadDataFromXlsx]); // Added dependency to useEffect hook
 
@@ -61,7 +74,7 @@ export default function Home() {
   const handleCalculate = () => {
     // Verifing if the user inform all fields.
     if (
-      !userInput.c  ||
+      !userInput.c ||
       !userInput.ir ||
       !userInput.ef ||
       !userInput.ed ||
@@ -69,20 +82,29 @@ export default function Home() {
       !userInput.at ||
       !userInput.analyte
     ) {
-      setCalculateResult("ERROR: You need to inform all fields.");
+      setError("You need to inform all fields.");
       return;
     }
     // Resultados
-    let estimateIntake = estimatedIntake(userInput.c, userInput.ir, userInput.ef, userInput.ed, userInput.bw, userInput.at);
-    
+    let estimateIntake = estimatedIntake(
+      userInput.c,
+      userInput.ir,
+      userInput.ef,
+      userInput.ed,
+      userInput.bw,
+      userInput.at
+    );
+
     const analyteData = mapData.get(userInput.analyte);
-    if(!analyteData?.RfDo) {
-      setCalculateResult("ERROR: Analyte not founded, or, RFDo not founded");
+    if (!analyteData?.RfDo) {
+      setError("ERROR: Analyte not founded, or, RFDo not founded");
       return;
-    } 
+    }
+
+    setError(null);
     let risk = nonCarcinogenicRisk(estimateIntake, analyteData.RfDo);
-    
-    setCalculateResult(String(risk));
+
+    setCalculateResult(risk);
   };
 
   return (
@@ -104,8 +126,10 @@ export default function Home() {
           <input
             id="IR"
             type="number"
-            value={userInput.ir ?? ''}
-            onChange={(e) => setUserInput({...userInput, ir: stringToNumber(e.target.value)})}
+            value={userInput.ir ?? ""}
+            onChange={(e) =>
+              setUserInput({ ...userInput, ir: stringToNumber(e.target.value) })
+            }
             className={styles.inputField}
           />
 
@@ -171,8 +195,12 @@ export default function Home() {
           <div className={styles.resultBox}>
             <p className={styles.resultText}>Risk Quotient</p>
             <span className={styles.resultValue}>{calculateResult}</span>
+            {resultMessage && (
+              <span className={styles.resultValue}>{resultMessage}</span>
+            )}
           </div>
         </div>
+        {error && <div>{error}</div>}
       </div>
     </main>
   );
