@@ -1,0 +1,163 @@
+REMA Risk Assessment Calculator - How to Run
+============================================
+
+PREREQUISITES
+=============
+- Node.js version 18.0 or later
+- A package manager (npm, yarn, pnpm, or bun)
+- A modern web browser (Chrome, Firefox, Safari, Edge)
+
+INSTALLATION STEPS
+==================
+
+1. Navigate to the project directory:
+   cd desafio-rema/desafio-rema
+
+2. Install dependencies using one of these commands:
+   
+   Using npm:
+   npm install
+   
+   Using yarn:
+   yarn install
+   
+   Using pnpm:
+   pnpm install
+   
+   Using bun:
+   bun install
+
+3. Start the development server:
+   
+   Using npm:
+   npm run dev
+   
+   Using yarn:
+   yarn dev
+   
+   Using pnpm:
+   pnpm dev
+   
+   Using bun:
+   bun dev
+
+4. Open your web browser and navigate to:
+   http://localhost:3000
+
+The application should now be running and accessible in your browser.
+
+AVAILABLE SCRIPTS
+=================
+
+Development:
+- npm run dev    - Start development server with Turbopack
+- npm run build  - Build the application for production
+- npm run start  - Start the production server
+- npm run lint   - Run ESLint for code quality checks
+
+PRODUCTION BUILD
+================
+
+To build the application for production:
+
+1. Run the build command:
+   npm run build
+
+2. Start the production server:
+   npm run start
+
+3. The application will be available at:
+   http://localhost:3000
+
+TROUBLESHOOTING
+===============
+
+Common Issues:
+
+1. Port 3000 already in use:
+   - The development server will automatically use the next available port
+   - Check the terminal output for the actual URL
+
+2. Node.js version issues:
+   - Ensure you have Node.js 18.0 or later installed
+   - Check version with: node --version
+
+3. Dependency installation fails:
+   - Clear npm cache: npm cache clean --force
+   - Delete node_modules folder and package-lock.json
+   - Run npm install again
+
+4. Application doesn't load:
+   - Check that all dependencies are installed
+   - Ensure the development server is running
+   - Check browser console for any error messages
+
+5. Excel file not loading:
+   - Ensure RSLs_summaryTable.xlsx is in the public/ folder
+   - Check browser network tab for 404 errors
+
+FILE STRUCTURE
+==============
+
+Important files and folders:
+- src/app/page.tsx          - Main application component
+- src/hooks/useRiskCalculator.ts - Calculator logic
+- src/components/FormField.tsx   - Form input component
+- src/utils/validation.ts        - Input validation
+- src/utils/math_utils.ts        - Mathematical calculations
+- src/constants/index.ts         - Application constants
+- public/RSLs_summaryTable.xlsx  - Contaminant database
+- package.json                   - Dependencies and scripts
+
+USING THE APPLICATION
+=====================
+
+1. Fill in all required fields:
+   - Contaminant Concentration (mg/L or mg/kg)
+   - Intake Rate (L/day or kg/day)
+   - Exposure Frequency (days/year)
+   - Exposure Duration (years)
+   - Body Weight (kg)
+   - Averaging Time (days)
+   - Select a Contaminant from the dropdown
+
+2. Click the "Calculate" button
+
+3. View the Risk Quotient result and risk assessment
+
+VALIDATION LIMITS
+=================
+
+The application enforces these input limits:
+- Concentration: 0 - 10,000 mg/L or mg/kg
+- Intake Rate: 0 - 100 L/day or kg/day
+- Exposure Frequency: 0 - 365 days/year
+- Exposure Duration: 0 - 100 years
+- Body Weight: 0 - 500 kg
+- Averaging Time: 0 - 36,500 days (~100 years)
+
+DEPLOYMENT
+==========
+
+For production deployment:
+
+1. Build the application:
+   npm run build
+
+2. Deploy the .next folder to your hosting service
+
+3. For Vercel deployment:
+   - Push code to GitHub
+   - Connect repository to Vercel
+   - Deploy automatically
+
+SUPPORT
+=======
+
+If you encounter issues:
+1. Check this file for troubleshooting steps
+2. Review the README.md for additional information
+3. Check the browser console for error messages
+4. Ensure all prerequisites are met
+
+The application is designed to work in modern browsers and requires JavaScript to be enabled.

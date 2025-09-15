@@ -14,13 +14,14 @@
  * - BW: Body weight [kg]
  * - AT: Averaging time [day]
  * 
- * @param {number} c - Contaminant concentration in the medium [mg/L or mg/kg].
- * @param {number} ir - Intake rate or contact rate with the medium [L/day or kg/day].
- * @param {number} ef - Exposure frequency [day/year].
- * @param {number} ed - Exposure duration [year].
- * @param {number} bw - Body weight [kg].
- * @param {number} at - Averaging time [day].
- * @returns {number} The estimated daily intake of the contaminant [mg/(kg·day)].
+ * @param c - Contaminant concentration in the medium [mg/L or mg/kg].
+ * @param ir - Intake rate or contact rate with the medium [L/day or kg/day].
+ * @param ef - Exposure frequency [day/year].
+ * @param ed - Exposure duration [year].
+ * @param bw - Body weight [kg].
+ * @param at - Averaging time [day].
+ * @returns The estimated daily intake of the contaminant [mg/(kg·day)].
+ * @throws {Error} If any parameter is invalid (NaN, negative, or zero for denominators).
  * 
  * @example
  * const intake = estimatedIntake(0.01, 2, 350, 30, 70, 25550);
@@ -34,7 +35,23 @@ export function estimatedIntake(
     bw: number,
     at: number
 ): number {
-    return c*(ir*ef*ed)/(bw*at)
+    // Input validation
+    const params = { c, ir, ef, ed, bw, at };
+    for (const [key, value] of Object.entries(params)) {
+        if (Number.isNaN(value) || !Number.isFinite(value)) {
+            throw new Error(`Invalid parameter ${key}: must be a valid number`);
+        }
+        if (value < 0) {
+            throw new Error(`Invalid parameter ${key}: must be non-negative`);
+        }
+    }
+    
+    // Check for division by zero
+    if (bw === 0 || at === 0) {
+        throw new Error('Body weight and averaging time must be greater than zero');
+    }
+    
+    return (c * ir * ef * ed) / (bw * at);
 }
 
 /**
@@ -48,9 +65,10 @@ export function estimatedIntake(
  * - QR > 1 indicates a potential health risk
  * - QR ≤ 1 indicates exposure is within safe limits
  * 
- * @param {number} intake - The daily intake of the contaminant [mg/(kg·day)].
- * @param {number} rfd - The Reference Dose of the contaminant [mg/(kg·day)].
- * @returns {number}  The calculated non-carcinogenic risk quotient (QR), unitless.
+ * @param intake - The daily intake of the contaminant [mg/(kg·day)].
+ * @param rfd - The Reference Dose of the contaminant [mg/(kg·day)].
+ * @returns The calculated non-carcinogenic risk quotient (QR), unitless.
+ * @throws {Error} If any parameter is invalid or RfD is zero.
  * 
  * @example
  * const qr = nonCarcinogenicRisk(0.005, 0.01);
@@ -64,5 +82,19 @@ export function nonCarcinogenicRisk(
     intake: number,
     rfd: number
 ): number {
-    return intake/rfd;
+    // Input validation
+    if (Number.isNaN(intake) || !Number.isFinite(intake)) {
+        throw new Error('Invalid intake: must be a valid number');
+    }
+    if (Number.isNaN(rfd) || !Number.isFinite(rfd)) {
+        throw new Error('Invalid RfD: must be a valid number');
+    }
+    if (intake < 0) {
+        throw new Error('Intake must be non-negative');
+    }
+    if (rfd <= 0) {
+        throw new Error('RfD must be greater than zero');
+    }
+    
+    return intake / rfd;
 }
