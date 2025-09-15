@@ -1,5 +1,3 @@
-// In app/page.tsx
-
 "use client";
 
 import Image from "next/image";
@@ -24,7 +22,7 @@ type userArguments = {
 
 export default function Home() {
   const [userInput, setUserInput] = useState<userArguments>({});
-  const [calculateResult, setCalculateResult] = useState<number>(NaN);
+  const [calculateResult, setCalculateResult] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [mapData, setMapData] = useState<Map<string, rlsColumns>>(new Map());
@@ -56,7 +54,7 @@ export default function Home() {
   }, [setMapData]);
 
   useEffect(() => {
-    if (Number.isNaN(calculateResult)) {
+    if (calculateResult === null || Number.isNaN(calculateResult)) {
       return;
     }
     if (calculateResult >= 1) {
@@ -68,11 +66,10 @@ export default function Home() {
 
   useEffect(() => {
     loadDataFromXlsx();
-  }, [loadDataFromXlsx]); // Added dependency to useEffect hook
+  }, [loadDataFromXlsx]);
 
-  // Performs the calculation when the button is clicked
   const handleCalculate = () => {
-    // Verifing if the user inform all fields.
+    // Verifing if the user informed all fields.
     if (
       !userInput.c ||
       !userInput.ir ||
@@ -83,6 +80,8 @@ export default function Home() {
       !userInput.analyte
     ) {
       setError("You need to inform all fields.");
+      setCalculateResult(null);
+      setResultMessage("Error while calculating QR, please fill all fields");
       return;
     }
     // Resultados
@@ -98,6 +97,8 @@ export default function Home() {
     const analyteData = mapData.get(userInput.analyte);
     if (!analyteData?.RfDo) {
       setError("ERROR: Analyte not founded, or, RFDo not founded");
+      setCalculateResult(null);
+      setResultMessage("Error while calculating QR, please fill all fields");
       return;
     }
 
@@ -112,17 +113,22 @@ export default function Home() {
       <div className={styles.container}>
         {/* Left side: Inputs and Button */}
         <div className={styles.inputSection}>
-
-          <label htmlFor="C">Contaminant Concentration in Medium [mg/L or mg/kg]:</label>
+          <label htmlFor="C">
+            Contaminant Concentration in Medium [mg/L or mg/kg]:
+          </label>
           <input
             id="C"
             type="number"
-            value={userInput.c ?? ''}
-            onChange={(e) => setUserInput({...userInput, c: stringToNumber(e.target.value)})}
+            value={userInput.c ?? ""}
+            onChange={(e) =>
+              setUserInput({ ...userInput, c: stringToNumber(e.target.value) })
+            }
             className={styles.inputField}
           />
 
-          <label htmlFor="IR">Intake Rate / Contact Rate with medium [L/day or kg/day]:</label>
+          <label htmlFor="IR">
+            Intake Rate / Contact Rate with medium [L/day or kg/day]:
+          </label>
           <input
             id="IR"
             type="number"
@@ -137,8 +143,10 @@ export default function Home() {
           <input
             id="EF"
             type="number"
-            value={userInput.ef ?? ''}
-            onChange={(e) => setUserInput({...userInput, ef: stringToNumber(e.target.value)})}
+            value={userInput.ef ?? ""}
+            onChange={(e) =>
+              setUserInput({ ...userInput, ef: stringToNumber(e.target.value) })
+            }
             className={styles.inputField}
           />
 
@@ -146,8 +154,10 @@ export default function Home() {
           <input
             id="ED"
             type="number"
-            value={userInput.ed ?? ''}
-            onChange={(e) => setUserInput({...userInput, ed: stringToNumber(e.target.value)})}
+            value={userInput.ed ?? ""}
+            onChange={(e) =>
+              setUserInput({ ...userInput, ed: stringToNumber(e.target.value) })
+            }
             className={styles.inputField}
           />
 
@@ -155,8 +165,10 @@ export default function Home() {
           <input
             id="BW"
             type="number"
-            value={userInput.bw ?? ''}
-            onChange={(e) => setUserInput({...userInput, bw: stringToNumber(e.target.value)})}
+            value={userInput.bw ?? ""}
+            onChange={(e) =>
+              setUserInput({ ...userInput, bw: stringToNumber(e.target.value) })
+            }
             className={styles.inputField}
           />
 
@@ -164,20 +176,26 @@ export default function Home() {
           <input
             id="AT"
             type="number"
-            value={userInput.at ?? ''}
-            onChange={(e) => setUserInput({...userInput, at: stringToNumber(e.target.value)})}
+            value={userInput.at ?? ""}
+            onChange={(e) =>
+              setUserInput({ ...userInput, at: stringToNumber(e.target.value) })
+            }
             className={styles.inputField}
           />
 
           <label htmlFor="anality">Anality:</label>
           <select
             id="anality"
-            value={userInput.analyte ?? ''}
-            onChange={(e) => setUserInput({...userInput, analyte: e.target.value})}
+            value={userInput.analyte ?? ""}
+            onChange={(e) =>
+              setUserInput({ ...userInput, analyte: e.target.value })
+            }
             className={styles.inputField} /* Matched class for consistency */
           >
             {/* Added a default, disabled option */}
-            <option value="" disabled>Select an analyte</option>
+            <option value="" disabled>
+              Select an analyte
+            </option>
             {Array.from(mapData.keys()).map((key) => (
               <option key={key} value={key}>
                 {key}
@@ -188,19 +206,23 @@ export default function Home() {
           <button onClick={handleCalculate} className={styles.calculateButton}>
             Calculate
           </button>
+          {error && <div className={styles.errorMessage}>{error}</div>}
         </div>
 
         {/* Right side: Result Display */}
         <div className={styles.resultSection}>
           <div className={styles.resultBox}>
             <p className={styles.resultText}>Risk Quotient</p>
-            <span className={styles.resultValue}>{calculateResult}</span>
+            {calculateResult !== null && (
+              <span className={styles.resultValue}>
+                {calculateResult.toPrecision(3)}
+              </span>
+            )}
             {resultMessage && (
               <span className={styles.resultValue}>{resultMessage}</span>
             )}
           </div>
         </div>
-        {error && <div>{error}</div>}
       </div>
     </main>
   );

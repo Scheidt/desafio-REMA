@@ -95,3 +95,17 @@
   font-weight: bold;
   color: #ffffff; /* Pure white for prominent result */
 }
+
+.errorMessage {
+  color: #ff0000; /* Red color */
+  margin-top: 10px; /* Adjust space between button and error message */
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.fieldError {
+  color: #cc0000; /* A slightly darker red */
+  font-size: 0.8rem;
+  margin-top: 4px;
+  margin-bottom: 8px; /* Adds a little space before the next label */
+}
