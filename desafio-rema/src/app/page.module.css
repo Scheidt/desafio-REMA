@@ -109,3 +109,12 @@
   margin-top: 4px;
   margin-bottom: 8px; /* Adds a little space before the next label */
 }
+
+.resultError {
+  display: block;
+  width: 100%;
+  color: #ff0000; /* Red */
+  text-align: center;
+  font-size: 3rem; /* Adjust size as needed */
+  margin-top: 10px;
+}

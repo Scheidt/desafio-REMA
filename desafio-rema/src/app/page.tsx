@@ -1,15 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import * as XLSX from "xlsx";
 import { estimatedIntake, nonCarcinogenicRisk } from "@/utils/math_utils";
 import { useState, useEffect, useCallback } from "react";
 import { stringToNumber } from "@/utils/main";
+import { parseRSLXlsx } from "@/utils/parse_xlsx";
 import styles from "./page.module.css";
 
 type rlsColumns = {
   RfDo: number | undefined; //RfD_o [mg/kg-day]
 };
+
 type userArguments = {
   c?: number;
   ir?: number;
@@ -17,38 +18,32 @@ type userArguments = {
   ed?: number;
   bw?: number;
   at?: number;
-  analyte?: string;
+  contaminant?: string;
+};
+
+type FieldErrors = {
+  c?: string;
+  ir?: string;
+  ef?: string;
+  ed?: string;
+  bw?: string;
+  at?: string;
+  contaminant?: string;
 };
 
 export default function Home() {
   const [userInput, setUserInput] = useState<userArguments>({});
   const [calculateResult, setCalculateResult] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [globalError, setGlobalError] = useState<string | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [mapData, setMapData] = useState<Map<string, rlsColumns>>(new Map());
 
   const loadDataFromXlsx = useCallback(async () => {
     const res = await fetch("/RSLs_summaryTable.xlsx");
     const arrayBuffer = await res.arrayBuffer();
-
-    const workbook = XLSX.read(arrayBuffer, { type: "array" });
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-    });
-
-    const resultMap = new Map<string, rlsColumns>();
-    for (let i = 1; i < jsonData.length; i++) {
-      const row = jsonData[i]; //
-      const key = row[13]; // Coluna N
-      const rfd = row[4]; // Coluna E
-      if (key !== undefined) {
-        resultMap.set(String(key), {
-          RfDo: stringToNumber(rfd),
-        });
-      }
-    }
-
+    // Use shared utility for parsing
+    const resultMap = parseRSLXlsx(arrayBuffer);
     setMapData(resultMap);
     return;
   }, [setMapData]);
@@ -69,49 +64,55 @@ export default function Home() {
   }, [loadDataFromXlsx]);
 
   const handleCalculate = () => {
-    // Verifing if the user informed all fields.
-    if (
-      !userInput.c ||
-      !userInput.ir ||
-      !userInput.ef ||
-      !userInput.ed ||
-      !userInput.bw ||
-      !userInput.at ||
-      !userInput.analyte
-    ) {
-      setError("You need to inform all fields.");
+    const newErrors: FieldErrors = {};
+
+  if (!userInput.c) newErrors.c = "Please, inform Contaminant Concentration";
+  if (!userInput.ir) newErrors.ir = "Please, inform Intake Rate";
+  if (!userInput.ef) newErrors.ef = "Please, inform Exposure Frequency";
+  if (!userInput.ed) newErrors.ed = "Please, inform Exposure Duration";
+  if (!userInput.bw) newErrors.bw = "Please, inform Body Weight";
+  if (!userInput.at) newErrors.at = "Please, inform Averaging Time";
+  if (!userInput.contaminant) newErrors.contaminant = "Please, inform Contaminant";
+
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors);
+      setGlobalError(null);
       setCalculateResult(null);
       setResultMessage("Error while calculating QR, please fill all fields");
       return;
     }
-    // Resultados
+
+    setFieldErrors({});
+
     let estimateIntake = estimatedIntake(
-      userInput.c,
-      userInput.ir,
-      userInput.ef,
-      userInput.ed,
-      userInput.bw,
-      userInput.at
+      userInput.c!,
+      userInput.ir!,
+      userInput.ef!,
+      userInput.ed!,
+      userInput.bw!,
+      userInput.at!
     );
 
-    const analyteData = mapData.get(userInput.analyte);
-    if (!analyteData?.RfDo) {
-      setError("ERROR: Analyte not founded, or, RFDo not founded");
+
+    const contaminantData = mapData.get(userInput.contaminant!);
+    if (!contaminantData?.RfDo) {
+      setGlobalError("ERROR: Contaminant not found, or, RFDo not found");
       setCalculateResult(null);
       setResultMessage("Error while calculating QR, please fill all fields");
       return;
     }
 
-    setError(null);
-    let risk = nonCarcinogenicRisk(estimateIntake, analyteData.RfDo);
-
-    setCalculateResult(risk);
+    setGlobalError(null);
+  let risk = nonCarcinogenicRisk(estimateIntake, contaminantData.RfDo);
+  setCalculateResult(risk);
   };
+  
+  // A helper constant to determine if the result message is an error
+  const isResultError = Object.keys(fieldErrors).length > 0 || globalError !== null;
 
   return (
     <main className={styles.main}>
       <div className={styles.container}>
-        {/* Left side: Inputs and Button */}
         <div className={styles.inputSection}>
           <label htmlFor="C">
             Contaminant Concentration in Medium [mg/L or mg/kg]:
@@ -125,6 +126,7 @@ export default function Home() {
             }
             className={styles.inputField}
           />
+          {fieldErrors.c && <div className={styles.fieldError}>{fieldErrors.c}</div>}
 
           <label htmlFor="IR">
             Intake Rate / Contact Rate with medium [L/day or kg/day]:
@@ -138,6 +140,7 @@ export default function Home() {
             }
             className={styles.inputField}
           />
+          {fieldErrors.ir && <div className={styles.fieldError}>{fieldErrors.ir}</div>}
 
           <label htmlFor="EF">Exposure Frequency [day/year]:</label>
           <input
@@ -149,6 +152,7 @@ export default function Home() {
             }
             className={styles.inputField}
           />
+          {fieldErrors.ef && <div className={styles.fieldError}>{fieldErrors.ef}</div>}
 
           <label htmlFor="ED">Exposure Duration [year]:</label>
           <input
@@ -160,6 +164,7 @@ export default function Home() {
             }
             className={styles.inputField}
           />
+          {fieldErrors.ed && <div className={styles.fieldError}>{fieldErrors.ed}</div>}
 
           <label htmlFor="bw">Body Weight [kg]:</label>
           <input
@@ -171,6 +176,7 @@ export default function Home() {
             }
             className={styles.inputField}
           />
+          {fieldErrors.bw && <div className={styles.fieldError}>{fieldErrors.bw}</div>}
 
           <label htmlFor="AT">Averaging time [day]:</label>
           <input
@@ -182,34 +188,30 @@ export default function Home() {
             }
             className={styles.inputField}
           />
+          {fieldErrors.at && <div className={styles.fieldError}>{fieldErrors.at}</div>}
 
-          <label htmlFor="anality">Anality:</label>
+          <label htmlFor="contaminant">Contaminant:</label>
           <select
-            id="anality"
-            value={userInput.analyte ?? ""}
+            id="contaminant"
+            value={userInput.contaminant ?? ""}
             onChange={(e) =>
-              setUserInput({ ...userInput, analyte: e.target.value })
+              setUserInput({ ...userInput, contaminant: e.target.value })
             }
-            className={styles.inputField} /* Matched class for consistency */
+            className={styles.inputField}
           >
-            {/* Added a default, disabled option */}
-            <option value="" disabled>
-              Select an analyte
-            </option>
+            <option value="" disabled>Select a contaminant</option>
             {Array.from(mapData.keys()).map((key) => (
-              <option key={key} value={key}>
-                {key}
-              </option>
+              <option key={key} value={key}>{key}</option>
             ))}
           </select>
-          
+          {fieldErrors.contaminant && <div className={styles.fieldError}>{fieldErrors.contaminant}</div>}
+
           <button onClick={handleCalculate} className={styles.calculateButton}>
             Calculate
           </button>
-          {error && <div className={styles.errorMessage}>{error}</div>}
+          {globalError && <div className={styles.errorMessage}>{globalError}</div>}
         </div>
 
-        {/* Right side: Result Display */}
         <div className={styles.resultSection}>
           <div className={styles.resultBox}>
             <p className={styles.resultText}>Risk Quotient</p>
@@ -219,7 +221,13 @@ export default function Home() {
               </span>
             )}
             {resultMessage && (
-              <span className={styles.resultValue}>{resultMessage}</span>
+              <span
+                className={
+                  isResultError ? styles.resultError : styles.resultValue
+                }
+              >
+                {resultMessage}
+              </span>
             )}
           </div>
         </div>
