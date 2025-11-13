@@ -1,7 +1,7 @@
 "use client";
 
-import { useRiskCalculator } from "@/hooks/useRiskCalculator";
 import { FormField } from "@/components/FormField";
+import { useRiskCalculator } from "@/hooks/useRiskCalculator";
 import styles from "./page.module.css";
 
 export default function Home() {

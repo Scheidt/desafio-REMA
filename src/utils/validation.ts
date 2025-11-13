@@ -1,5 +1,5 @@
-import { UserArguments, FieldErrors, ValidationResult } from "@/types";
 import { ERROR_MESSAGES, FIELD_LABELS, VALIDATION_LIMITS } from "@/constants";
+import type { FieldErrors, UserArguments, ValidationResult } from "@/types";
 
 /**
  * Validates user input for the risk assessment calculator

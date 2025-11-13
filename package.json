@@ -7,7 +7,7 @@
 		"build": "next build --turbopack",
 		"start": "next start",
 		"lint": "npx @biomejs/biome ci .",
-		"lint:fix": "npx @biomejs/biome format --write .",
+		"lint:fix": "npx @biomejs/biome check --write .",
 		"test:unit": "npx jest",
 		"test:integration": "npx playwright test"
 	},

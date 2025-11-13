@@ -1,6 +1,6 @@
-import React from "react";
-import { UserArguments, FieldErrors } from "@/types";
+import type React from "react";
 import { FIELD_LABELS } from "@/constants";
+import { FieldErrors, type UserArguments } from "@/types";
 import styles from "../app/page.module.css";
 
 interface FormFieldProps {

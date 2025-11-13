@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
-import { UserArguments, FieldErrors, CalculationResult } from "@/types";
-import { estimatedIntake, nonCarcinogenicRisk } from "@/utils/math_utils";
-import { validateUserInput } from "@/utils/validation";
-import { parseRSLXlsx } from "@/utils/parse_xlsx";
+import { useCallback, useEffect, useState } from "react";
 import {
+	DISPLAY_PRECISION,
 	ERROR_MESSAGES,
 	RESULT_MESSAGES,
 	RISK_THRESHOLDS,
-	DISPLAY_PRECISION,
 } from "@/constants";
+import type { CalculationResult, FieldErrors, UserArguments } from "@/types";
+import { estimatedIntake, nonCarcinogenicRisk } from "@/utils/math_utils";
+import { parseRSLXlsx } from "@/utils/parse_xlsx";
+import { validateUserInput } from "@/utils/validation";
 
 interface UseRiskCalculatorReturn {
 	userInput: UserArguments;

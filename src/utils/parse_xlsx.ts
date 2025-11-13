@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
-import { RlsColumns } from "@/types";
 import { EXCEL_COLUMNS } from "@/constants";
+import type { RlsColumns } from "@/types";
 
 /**
  * Parse XLSX buffer and return a Map of contaminant keys to RfDo values
